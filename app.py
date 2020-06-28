@@ -68,8 +68,8 @@ class Run(db.Model):
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    username = request.form.get('username')
-    password = request.form.get('password')
+    username = request.json.get('username')
+    password = request.json.get('password')
     if not username:
         return jsonify({'error': 'must supply a username'}), 400
     if not password:
@@ -84,9 +84,9 @@ def login():
 
 @app.route('/api/signup', methods=['POST'])
 def signup():
-    username = request.form.get('username')
-    email = request.form.get('email')
-    password = request.form.get('password')
+    username = request.json.get('username')
+    email = request.json.get('email')
+    password = request.json.get('password')
     if not username:
         return jsonify({'error': 'must supply a username'}), 400
     if not email:
@@ -141,13 +141,13 @@ def run_list():
     else:
         run = Run(
             user_id=identity['id'],
-            run_date=parse_datetime(request.form.get('run_date')) or datetime.utcnow(),
-            distance=parse_float(request.form.get('distance')),
-            duration=parse_float(request.form.get('duration')),
-            title=parse_title(request.form.get('title')),
-            description=request.form.get('description', ''),
-            units=parse_units(request.form.get('units')),
-            location=request.form.get('location', '')
+            run_date=parse_datetime(request.json.get('run_date')) or datetime.utcnow(),
+            distance=parse_float(request.json.get('distance')),
+            duration=parse_float(request.json.get('duration')),
+            title=parse_title(request.json.get('title')),
+            description=request.json.get('description', ''),
+            units=parse_units(request.json.get('units')),
+            location=request.json.get('location', '')
         )
         try:
             db.session.add(run)
@@ -166,13 +166,13 @@ def run_detail(run_id):
     if request.method == 'PUT':
         if identity['id'] != run.user_id:
             return jsonify({'error': 'unauthorized to update run'}), 403
-        run.run_date = parse_datetime(request.form['run_date']) if 'run_date' in request.form else run.run_date
-        run.distance = parse_float(request.form['distance']) if 'distance' in request.form else run.distance
-        run.duration = parse_float(request.form['duration']) if 'duration' in request.form else run.duration
-        run.title = request.form['title'] if 'title' in request.form else run.title
-        run.description = request.form['description'] if 'description' in request.form else run.description
-        run.units = parse_units(request.form['units']) if 'units' in request.form else run.units
-        run.location = request.form['location'] if 'location' in request.form else run.location
+        run.run_date = parse_datetime(request.json['run_date']) if 'run_date' in request.json else run.run_date
+        run.distance = parse_float(request.json['distance']) if 'distance' in request.json else run.distance
+        run.duration = parse_float(request.json['duration']) if 'duration' in request.json else run.duration
+        run.title = request.json['title'] if 'title' in request.json else run.title
+        run.description = request.json['description'] if 'description' in request.json else run.description
+        run.units = parse_units(request.json['units']) if 'units' in request.json else run.units
+        run.location = request.json['location'] if 'location' in request.json else run.location
         try:
             db.session.commit()
         except Exception as e:
