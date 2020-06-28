@@ -195,4 +195,4 @@ def run_detail(run_id):
     return jsonify({'message': 'run deleted'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
