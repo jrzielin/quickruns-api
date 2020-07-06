@@ -4,9 +4,10 @@ from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 import os
 from datetime import datetime
-from helpers import serialize_list, parse_float, parse_int, parse_datetime, parse_units, parse_title
+from helpers import serialize_list, parse_float, parse_int, parse_datetime, parse_units, parse_title, make_query
 from constants import PAGE_SIZE
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from pypika import Query, Table, Tables
 
 load_dotenv()
 app = Flask(__name__)
@@ -116,28 +117,46 @@ def signup():
 @app.route('/api/users', methods=['GET'])
 @jwt_required
 def user_list():
-    identity = get_jwt_identity()
-    page = parse_int(request.args.get('page', 1))
-    users = User.query.order_by(User.username).paginate(page, PAGE_SIZE, error_out=False)
-    return jsonify({'users': serialize_list(users)})
+    q = Query.from_('users').select('id', 'first_name', 'last_name', 'email', 'username', 'created_at').orderby('username').limit(PAGE_SIZE)
+    results = make_query(db, q)
+    return jsonify({'users': results})
 
 @app.route('/api/users/<int:user_id>', methods=['GET'])
 @jwt_required
 def user_detail(user_id):
-    identity = get_jwt_identity()
-    user = User.query.filter_by(id=user_id).first()
-    if user is None:
+    users = Table('users')
+    q = Query.from_('users').select('id', 'first_name', 'last_name', 'email', 'username', 'created_at').where(users.id == user_id)
+    results = make_query(db, q)
+    try:
+        result = results[0]
+    except IndexError:
         return jsonify({'error': 'user does not exist'}), 404
-    return jsonify({'user': user.serialize()})
+    return jsonify({'user': result})
 
 @app.route('/api/runs', methods=['GET', 'POST'])
 @jwt_required
 def run_list():
     identity = get_jwt_identity()
     if request.method == 'GET':
+        users, runs = Tables('users', 'runs')
         page = parse_int(request.args.get('page', 1))
-        runs = Run.query.order_by(Run.run_date.desc()).paginate(page, PAGE_SIZE, error_out=False)
-        return jsonify({'runs': serialize_list(runs)})
+        q = Query.from_(runs).join(users).on(
+            runs.user_id == users.id
+        ).select(
+            runs.id, 
+            runs.user_id,
+            users.username,
+            runs.run_date, 
+            runs.distance, 
+            runs.duration, 
+            runs.title, 
+            runs.description, 
+            runs.units, 
+            runs.location, 
+            runs.created_at
+        ).orderby(runs.run_date)
+        results = make_query(db, q)
+        return jsonify({'runs': results})
     else:
         run = Run(
             user_id=identity['id'],
@@ -189,4 +208,4 @@ def run_detail(run_id):
     return jsonify({'message': 'run deleted'})
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

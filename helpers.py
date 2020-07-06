@@ -43,3 +43,7 @@ def parse_title(x):
         return 'Normal Run'
     else:
         return x
+
+def make_query(db, q):
+    results = db.engine.execute(q.get_sql())
+    return [dict(r.items()) for r in results]
